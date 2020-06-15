@@ -106,7 +106,6 @@ class TreeNode {
      * Store a spacial object
      */
     remove(object) {
-        console.log(`Remove entity: ${object.id} from level ${this.level}`)
         if (!this.children) {
             let ret = null;
             for (let i = 0; i < this.payload.length; i++) {
@@ -166,6 +165,7 @@ class TreeNode {
      */
     searchNearByNodes(x, y, level, r=1) {
         let res = [];
+        let c = 0;
         let w = TreeNode.getBucketWidth(level - 1);
         let cNode = this.searchNode(x, y, level);
         if (!cNode) {
@@ -174,17 +174,18 @@ class TreeNode {
         for (let i = cNode.cx-r*w; i <= cNode.cx+r*w; i+=w) {
             for (let j = cNode.cy-r*w; j <= cNode.cy+r*w; j+=w) {
                 res.push(this.searchNode(i, j, level));
+                c++;
             }
         }
-        return res;
+        return res.filter(n => n);
     }
 
     /**
      * Find merged payloads among target node and its neighbours
      */
     searchNearByPayloadsMerged(x, y, level, r=1) {
-        let nodes = this.searchNearByNodes(x, y, level, r).filter(n => n);
-        return [].concat.apply([], nodes.map(n => n.payload));
+        let nodes = this.searchNearByNodes(x, y, level, r);
+        return [].concat.apply([], nodes.map(findPayloads));
     }
 
     /**
@@ -208,4 +209,16 @@ class TreeNode {
 
 }
 
+function findPayloads(node) {
+    if (node.payload) {
+        return node.payload;
+    } else {
+        return [
+            ...findPayloads(node.children[0]),
+            ...findPayloads(node.children[1]),
+            ...findPayloads(node.children[2]),
+            ...findPayloads(node.children[3])
+        ]
+    }
+}
 module.exports = TreeNode;

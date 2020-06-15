@@ -30,7 +30,7 @@ class Physics {
         // Collision detection/handling
         Object.keys(this.bodies.entityMap).forEach((id) => {
             let e = this.bodies.entityMap[id];
-            let neighbours = this.bodies.peekNeighbours(e.id);
+            let neighbours = this.bodies.peekClosestNeighbours(e.id);
             neighbours.forEach(n => {
                 if (n.id < e.id) {
                     let result = Physics.handleHit(e, n);

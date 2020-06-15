@@ -150,7 +150,7 @@ eval("var g;\n\n// This works in non-strict mode\ng = (function() {\n\treturn th
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
-eval("(() => {\n    const io = __webpack_require__(/*! ../lib/socket.io */ \"./src/public/lib/socket.io.js\");\n    var Intro = __webpack_require__(/*! ./intro */ \"./src/public/js/intro.js\");\n    window.socket = io(); // require('../lib/socket.io');\n    window.socket.id = 1;\n    const config = {\n        type: Phaser.AUTO,\n        width: window.innerWidth,\n        height: window.innerHeight,\n        scale: {\n            mode: Phaser.Scale.FIT,\n            autoCenter: Phaser.Scale.CENTER_BOTH\n        },\n        scene: [Intro],\n        parent: \"game\",\n        antialias: true\n    };\n    const game = new Phaser.Game(config);\n    document.addEventListener('contextmenu', event => event.preventDefault());\n})();\n\n//# sourceURL=webpack:///./src/public/js/app.js?");
+eval("(() => {\n    const io = __webpack_require__(/*! ../lib/socket.io */ \"./src/public/lib/socket.io.js\");\n    var Intro = __webpack_require__(/*! ./intro */ \"./src/public/js/intro.js\");\n    window.socket = io(); // require('../lib/socket.io');\n    window.socket.id = 1;\n    const config = {\n        type: Phaser.AUTO,\n        width: window.innerWidth,\n        height: window.innerHeight,\n        scale: {\n            mode: Phaser.Scale.FIT,\n            autoCenter: Phaser.Scale.CENTER_BOTH\n        },\n        // pixelArt: true,\n        scene: [Intro],\n        parent: \"game\",\n        antialias: true\n    };\n    const game = new Phaser.Game(config);\n    document.addEventListener('contextmenu', event => event.preventDefault());\n})();\n\n//# sourceURL=webpack:///./src/public/js/app.js?");
 
 /***/ }),
 
@@ -161,7 +161,7 @@ eval("(() => {\n    const io = __webpack_require__(/*! ../lib/socket.io */ \"./s
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
-eval("var BGRender = __webpack_require__(/*! ./renders/background */ \"./src/public/js/renders/background.js\");\nclass Intro extends Phaser.Scene {\n    constructor (config) {\n        super({ key: 'Intro', active: true });\n    }\n\n    preload () {\n        this.load.image('bg', '../assets/bk.png');\n    }\n\n    create () {\n        let time = 0;\n        this.ping = 0;\n        this.bgRender = new BGRender(this);\n        // this.add.tileSprite(208*3, 208, 208*2, 208*2, 'bg');\n        // let a = this.add.tileSprite(750, 250, 500, 500, 'bg');\n        window.socket.on(\"Join\", (data) => {\n            console.log(data);\n        });\n        window.socket.on(\"Sync\", (data) => {\n            this.ping = data.time - time;\n            console.log(this.ping);\n            time = data.time;\n        });\n        window.socket.emit(\"Join\", {\n            id: window.socket.id,\n            name: \"\",\n            color: \"\"\n        });\n    }\n\n}\n\nmodule.exports = Intro;\n\n//# sourceURL=webpack:///./src/public/js/intro.js?");
+eval("var BGRender = __webpack_require__(/*! ./renders/background */ \"./src/public/js/renders/background.js\");\nvar ProbeRender = __webpack_require__(/*! ./renders/probe */ \"./src/public/js/renders/probe.js\");\nclass Intro extends Phaser.Scene {\n    constructor (config) {\n        super({ key: 'Intro', active: true });\n    }\n\n    preload () {\n        this.load.image('bg', '../assets/bk.png');\n        this.load.image('ufo', '../assets/ufo.png');\n    }\n\n    create () {\n        let time = 0;\n        this.ping = 0;\n        this.bgRender = new BGRender(this);\n        new ProbeRender(this);\n        // this.add.tileSprite(208*3, 208, 208*2, 208*2, 'bg');\n        // let a = this.add.tileSprite(750, 250, 500, 500, 'bg');\n        window.socket.on(\"Join\", (data) => {\n            console.log(data);\n        });\n        window.socket.on(\"Sync\", (data) => {\n            // this.ping = data.time - time;\n            // console.log(this.ping);\n            // time = data.time;\n            console.log(data.entities);\n        });\n        window.socket.emit(\"Join\", {\n            id: window.socket.id,\n            name: \"\",\n            color: \"\"\n        });\n    }\n\n}\n\nmodule.exports = Intro;\n\n//# sourceURL=webpack:///./src/public/js/intro.js?");
 
 /***/ }),
 
@@ -173,6 +173,17 @@ eval("var BGRender = __webpack_require__(/*! ./renders/background */ \"./src/pub
 /***/ (function(module, exports) {
 
 eval("const BW = 208*2;\nclass BGRender {\n  constructor(scene) {\n    scene.add.tileSprite(0, 0, BW, BW, 'bg');\n  }\n\n  update(entity) {\n\n  }\n\n  destroy() {\n\n  }\n}\nmodule.exports = BGRender;\n\n//# sourceURL=webpack:///./src/public/js/renders/background.js?");
+
+/***/ }),
+
+/***/ "./src/public/js/renders/probe.js":
+/*!****************************************!*\
+  !*** ./src/public/js/renders/probe.js ***!
+  \****************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+eval("class ProbeRender {\n  constructor(scene) {\n    this.sprite = scene.add.sprite(100, 100, 'ufo');\n    this.sprite.setScale(0.5);\n  }\n\n  update(data) {\n\n  }\n\n  destroy() {\n\n  }\n}\nmodule.exports = ProbeRender;\n\n//# sourceURL=webpack:///./src/public/js/renders/probe.js?");
 
 /***/ }),
 
@@ -188,13 +199,13 @@ eval("/* WEBPACK VAR INJECTION */(function(Buffer) {/*!\n * Socket.IO v2.3.0\n *
 /***/ }),
 
 /***/ 0:
-/*!***************************************************************************************************!*\
-  !*** multi ./src/public/js/app.js ./src/public/js/intro.js ./src/public/js/renders/background.js ***!
-  \***************************************************************************************************/
+/*!************************************************************************************************************************************!*\
+  !*** multi ./src/public/js/app.js ./src/public/js/intro.js ./src/public/js/renders/background.js ./src/public/js/renders/probe.js ***!
+  \************************************************************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
-eval("__webpack_require__(/*! ./src/public/js/app.js */\"./src/public/js/app.js\");\n__webpack_require__(/*! ./src/public/js/intro.js */\"./src/public/js/intro.js\");\nmodule.exports = __webpack_require__(/*! ./src/public/js/renders/background.js */\"./src/public/js/renders/background.js\");\n\n\n//# sourceURL=webpack:///multi_./src/public/js/app.js_./src/public/js/intro.js_./src/public/js/renders/background.js?");
+eval("__webpack_require__(/*! ./src/public/js/app.js */\"./src/public/js/app.js\");\n__webpack_require__(/*! ./src/public/js/intro.js */\"./src/public/js/intro.js\");\n__webpack_require__(/*! ./src/public/js/renders/background.js */\"./src/public/js/renders/background.js\");\nmodule.exports = __webpack_require__(/*! ./src/public/js/renders/probe.js */\"./src/public/js/renders/probe.js\");\n\n\n//# sourceURL=webpack:///multi_./src/public/js/app.js_./src/public/js/intro.js_./src/public/js/renders/background.js_./src/public/js/renders/probe.js?");
 
 /***/ })
 

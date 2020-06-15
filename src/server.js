@@ -18,16 +18,18 @@ let clients = {};
 global.rankings = [];
 global.entityCollection = new EntityCollection();
 global.myEngine = new MyEngine(global.entityCollection, 5000, 5000);
-global.myEngine.start();
 
 io.on('connection', (socket) => {
     console.log('Client Connected');
     clients[socket.id] = socket;
 
     socket.on(global.WS_EVENTS.JOIN, () => {
-        let newMember = IOController.gameJoin({sid: socket.id});
-        clients[socket.id].pkey = newMember.id;
-        // socket.emit(global.WS_EVENTS.JOIN, BoxService.packInitData(newMember));
+      console.log('Player joined');
+      let newMember = IOController.gameJoin({sid: socket.id});
+      clients[socket.id].pkey = newMember.id;
+      console.log(socket.id);
+      console.log(clients[socket.id].pkey);
+      // socket.emit(global.WS_EVENTS.JOIN, BoxService.packInitData(newMember));
     });
 
     socket.on("disconnect", () => {
@@ -39,19 +41,22 @@ io.on('connection', (socket) => {
 });
 
 // Debug
-// setInterval(() => {
-//     console.log(' - Server info -');
-//     console.log(global.entityCollection.stat());
-//     global.entityCollection.qTree.print();
-// }, 5000);
+setInterval(() => {
+    console.log(' - Server info -');
+    console.log(global.entityCollection.stat());
+    global.entityCollection.qTree.print();
+}, 5000);
 
 http.listen(port, () => console.log(`Server running on port ${port}!`));
 
 
 // Main Loop
 let tick = function() {
-    let data = {time: new Date().getTime()}
-    Object.keys(clients).forEach((id) => {clients[id].emit(global.WS_EVENTS.SYNC, data)});
+    global.myEngine.tick();
+    Object.keys(clients).forEach((id) => {
+      let data = clients[id].pkey? BoxService.packSyncData(clients[id].pkey) : {}
+      clients[id].emit(global.WS_EVENTS.SYNC, data);
+    });
 }
 
 var tickLengthMs = 1000 / 20

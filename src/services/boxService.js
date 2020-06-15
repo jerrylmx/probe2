@@ -1,4 +1,4 @@
-const GridService = require("./gridService");
+const EntityCollection = require('../models/entityCollection');
 
 class BoxService {
     static packInitData(target) {
@@ -8,7 +8,14 @@ class BoxService {
             RATE: global.RATE,
             DEV_MODE: process.env.DEV_MODE,
             GRID_COUNT: global.GRID_COUNT,
-            entities: GridService.findNearByGridIndex(target.x, target.y)
+            entities: []
+        }
+    }
+
+    static packSyncData(id) {
+        return {
+            time: new Date().getTime(),
+            entities: global.entityCollection.peekClosestNeighboursIncludeSelf(id)
         }
     }
 }

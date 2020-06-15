@@ -37,9 +37,18 @@ class EntityCollection {
         return this.entityMap[id];
     }
 
+    peekClosestNeighboursIncludeSelf(id) {
+        let e = this.peek(id);
+        return this.qTree.searchNearByPayloadsMerged(e.x, e.y, this.depth);
+    }
+
+    peekClosestNeighbours(id) {
+        return this.peekClosestNeighboursIncludeSelf(id).filter(obj => obj.id !== id);
+    }
+
     peekNeighbours(id) {
         let e = this.peek(id);
-        return this.qTree.searchNearByPayloadsMerged(e.x, e.y, this.depth).filter(obj => obj.id !== id);
+        return this.qTree.searchNearByPayloadsMerged(e.x, e.y, this.depth-1).filter(obj => obj.id !== id);
     }
 
     stat() {
