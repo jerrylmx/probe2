@@ -19,67 +19,74 @@ class FrameManager {
       this.hist = [];
       this.enabled = true;
       this.currentFrame = null;
+      this.ignoreNext = 0;
+      this.recovering = false
   }
 
   push(data) {
     // Real frame from server
-    this.currentFrame && console.log(new Date().getTime() - this.currentFrame.time);
+    let timeElapsed = this.currentFrame? new Date().getTime() - this.currentFrame.time:this.rate;
+    console.log(`Time elapsed: ${timeElapsed}`);
     this.ready = true;
     let frame = {
         time: new Date().getTime(),
         payload: data
     };
     this.currentFrame = frame;
-    let {x, y} = data[Object.keys(data)[0]]
-    console.log({x, y});
-    //   // Filling stage
-    //   if (this.queue.length < this.capacity) {
-    //       this.queue.push(frame);
-    //   // Rotation stage
-    //   } else {
-    //       this.top = this.top % this.capacity;
-    //       this.ready = true;
-    //       this.queue[this.top] = frame;
-    //   }
-    //   this.top++;
+
+    // Filling stage
+    if (this.queue.length < this.capacity) {
+        this.queue.push(frame);
+        this.top++;
+        return;
+    }
+    // Skipping stage
+    if (this.ready && !this.recovering && timeElapsed >= this.rate * 1.5) {
+      this.ignoreNext += Math.floor(timeElapsed / this.rate);
+    }
+
+    // Rotation stage
+    if (this.ignoreNext > 0) {
+      console.log('skipping')
+      this.ignoreNext -= 1;
+      if (this.ignoreNext === 0) {
+        this.recovering = true;
+      }
+      return;
+    } else {
+        this.top = this.top % this.capacity;
+        this.ready = true;
+        this.queue[this.top] = frame;
+        this.top++;
+        if (this.recovering) this.recovering = false;
+    }
   }
 
   // x0 ----- x2 latest
   pop() {
-    let res = Utils.clone(this.currentFrame.payload);
-    //   let x2 = this.queue[(this.top - 1 + this.capacity) % this.capacity];
-    //   let x1 = this.queue[(this.top - 2 + this.capacity) % this.capacity];
-    //   let x0 = this.queue[(this.top - 3 + this.capacity) % this.capacity];
+    let x2 = this.queue[(this.top - 1 + this.capacity) % this.capacity];
+    let x1 = this.queue[(this.top - 2 + this.capacity) % this.capacity];
+    let x0 = this.queue[(this.top - 3 + this.capacity) % this.capacity];
 
-    //   let res = Utils.clone(ref0);
-    //   for (let i = 0; i < Object.keys(x2.payload).length; i++) {
-    //       let key = Object.keys(x2.payload)[i];
-    //       let ref1 = x2.payload[key];
-    //       let ref0 = x1.payload[key];
-    //       let refp = x0.payload[key];
+    let res = Utils.clone(x1).payload;
+    if (!this.enabled) return res;
+    for (let i = 0; i < Object.keys(x2.payload).length; i++) {
+        let key = Object.keys(x2.payload)[i];
+        let ref1 = x2.payload[key];
+        let ref0 = x1.payload[key];
 
-    //       res[key] = Utils.clone(ref0);
-    //       if (!this.enabled) continue;
-
-    //       // No interpolation on non-spacial, or new objects
-    //       if (!ref1 || !ref1.x || !ref1.y || !ref0 || !ref0.x || !ref0.y) {
-    //           continue;
-    //       } else {
-    //           let gap = x2.time - x1.time || this.rate;
-    //           let r = (new Date().getTime() - x2.time) / gap;
-    //           let dx = ref1.x - ref0.x;
-    //           let dy = ref1.y - ref0.y;
-    //           let moveX = dx * r;
-    //           let moveY = dy * r;
-
-    //         //   if (gap < 10 && (Math.abs(moveX) > 10 || Math.abs(moveY) > 10)) {
-    //         //       continue;
-    //         //   }
-
-    //           res[key].x = ref0.x + moveX;
-    //           res[key].y = ref0.y + moveY;
-    //       }
-    //   }
+        // No interpolation on non-spacial, or new objects
+        if (!ref1 || !ref1.x || !ref1.y || !ref0 || !ref0.x || !ref0.y) {
+            continue;
+        } else {
+            let gap = this.rate;
+            let r = (new Date().getTime() - x2.time) / gap;
+            let dx = ref1.x - ref0.x;
+            let dy = ref1.y - ref0.y;
+            res[key].x = ref0.x + dx * r;
+            res[key].y = ref0.y + dy * r;
+        }
+    }
     return res;
   }
 
