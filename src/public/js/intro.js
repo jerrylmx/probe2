@@ -70,7 +70,6 @@ class Intro extends Phaser.Scene {
     }
 
     update() {
-        this.test && console.log(new Date().getTime() - this.test);
         this.test = new Date().getTime();
         if (!this.ready) return;
         if (this.fmanager.ready) {
