@@ -42,7 +42,7 @@ class FrameManager {
     }
     // Skipping stage
     if (this.ready && !this.recovering && timeElapsed >= this.rate * 1.5) {
-      this.ignoreNext += Math.floor(timeElapsed / this.rate);
+      this.ignoreNext += Math.ceil(timeElapsed / this.rate);
     }
 
     // Rotation stage
