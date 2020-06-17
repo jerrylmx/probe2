@@ -27,9 +27,22 @@ io.on('connection', (socket) => {
       console.log('Player joined');
       let newMember = IOController.gameJoin({sid: socket.id});
       clients[socket.id].pkey = newMember.id;
-      console.log(socket.id);
-      console.log(clients[socket.id].pkey);
-      // socket.emit(global.WS_EVENTS.JOIN, BoxService.packInitData(newMember));
+      // ACK join
+      socket.emit(global.WS_EVENTS.JOIN, BoxService.packInitData(newMember.id, newMember));
+    });
+
+    socket.on(global.WS_EVENTS.JOIN, () => {
+      console.log('Player joined');
+      if (clients[socket.id]) return;
+      let newMember = IOController.gameJoin({sid: socket.id});
+      clients[socket.id].pkey = newMember.id;
+      // ACK join
+      socket.emit(global.WS_EVENTS.JOIN, BoxService.packInitData(newMember.id, newMember));
+    });
+
+    socket.on(global.WS_EVENTS.MOVE, (data) => {
+      let entity = global.entityCollection.peek(data.id);
+      if(entity) entity.v = data.direction;
     });
 
     socket.on("disconnect", () => {
@@ -59,7 +72,7 @@ let tick = function() {
     });
 }
 
-var tickLengthMs = 1000 / 20
+var tickLengthMs = global.RATE
 var previousTick = Date.now()
 var gameLoop = function () {
   var now = Date.now()

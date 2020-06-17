@@ -161,7 +161,7 @@ eval("(() => {\n    const io = __webpack_require__(/*! ../lib/socket.io */ \"./s
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
-eval("var BGRender = __webpack_require__(/*! ./renders/background */ \"./src/public/js/renders/background.js\");\nvar ProbeRender = __webpack_require__(/*! ./renders/probe */ \"./src/public/js/renders/probe.js\");\nclass Intro extends Phaser.Scene {\n    constructor (config) {\n        super({ key: 'Intro', active: true });\n    }\n\n    preload () {\n        this.load.image('bg', '../assets/bk.png');\n        this.load.image('ufo', '../assets/ufo.png');\n    }\n\n    create () {\n        let time = 0;\n        this.ping = 0;\n        this.bgRender = new BGRender(this);\n        new ProbeRender(this);\n        // this.add.tileSprite(208*3, 208, 208*2, 208*2, 'bg');\n        // let a = this.add.tileSprite(750, 250, 500, 500, 'bg');\n        window.socket.on(\"Join\", (data) => {\n            console.log(data);\n        });\n        window.socket.on(\"Sync\", (data) => {\n            // this.ping = data.time - time;\n            // console.log(this.ping);\n            // time = data.time;\n            console.log(data.entities);\n        });\n        window.socket.emit(\"Join\", {\n            id: window.socket.id,\n            name: \"\",\n            color: \"\"\n        });\n    }\n\n}\n\nmodule.exports = Intro;\n\n//# sourceURL=webpack:///./src/public/js/intro.js?");
+eval("var BGRender = __webpack_require__(/*! ./renders/background */ \"./src/public/js/renders/background.js\");\nvar ProbeRender = __webpack_require__(/*! ./renders/probe */ \"./src/public/js/renders/probe.js\");\nvar Fmanager = __webpack_require__(/*! ./services/frame */ \"./src/public/js/services/frame.js\");\nvar Diff = __webpack_require__(/*! ./services/diff */ \"./src/public/js/services/diff.js\");\nvar RenderFactory = __webpack_require__(/*! ./services/rfactory */ \"./src/public/js/services/rfactory.js\");\nclass Intro extends Phaser.Scene {\n    constructor (config) {\n        super({ key: 'Intro', active: true });\n    }\n\n    preload () {\n        this.load.image('bg', '../assets/bk.png');\n        this.load.image('ufo', '../assets/ufo.png');\n    }\n\n    create () {\n        let time = 0;\n        this.ping = 0;\n        this.bgRender = new BGRender(this);\n        this.diff = new Diff({});\n        window.entities = {};\n\n        window.socket.on(\"Join\", (data) => {\n            // One-time settings for game scene\n            this.ready = true;\n            this.cfg = data;\n            this.fmanager = new Fmanager({rate: data.RATE});\n            this.fmanager.push(data.entities);\n            this.diff.refresh(data.entities);\n            let refDiff = this.diff.refDiff();\n            refDiff.toAdd.forEach((data) => {\n                window.entities[data.id] = RenderFactory.getRender(data.type, data, this);\n            });\n            this.me = window.entities[data.me.id];\n            this.cameras.main.setBounds(-2000, -2000, 8000, 8000);\n            this.cameras.main.setZoom(0.7);\n            this.cameras.main.zoomTo(1, 500);\n            this.cameras.main.startFollow(this.me.body);\n        });\n        window.socket.on(\"Sync\", (data) => {\n            if (!this.ready) return;\n            this.ping = data.time - time;\n            time = data.time;\n            this.fmanager.push(data.entities);\n        });\n        window.socket.emit(\"Join\", {\n            id: window.socket.id,\n            name: \"\",\n            color: \"\"\n        });\n        // Controls\n        let that = this;\n        this.input.on('pointermove', function (event) {\n            that.pointerPosition = {x: event.worldX, y: event.worldY};\n            if (!that.me) return;\n            let dir = new Phaser.Math.Vector2(event.worldX - that.me.body.x, event.worldY - that.me.body.y).normalize();\n            let angle = Math.atan2(dir.y, dir.x) * 180 / Math.PI + 90;\n            that.me.body.angle = angle;\n\n            // Limit pointer move request\n            if (that.pointerLocked) return;\n            window.socket.emit(\"Move\", { id: that.me.data.id, direction: dir, rotation: angle });\n            that.pointerLocked = true;\n            setTimeout(function () {\n                this.pointerLocked = false;\n            }.bind(that), 100);\n        });\n    }\n\n    update() {\n        if (!this.ready) return;\n        if (this.fmanager.ready) {\n            let entities = this.fmanager.pop();\n            this.diff.refresh(entities);\n            let diff = this.diff.refDiff();\n            diff.toAdd.forEach((data) => {\n                window.entities[data.id] = RenderFactory.getRender(data.type, data, this);\n            });\n            // diff.toRemove.forEach((data) => {\n            //     window.entities[data.id].destroy(this);\n            // });\n            diff.toUpdate.forEach((data) => {\n                window.entities[data.id].update(data, this);\n            });\n            this.bgRender.body.tilePositionX = this.me.body.x;\n            this.bgRender.body.tilePositionY = this.me.body.y;\n            this.bgRender.body.x = this.me.body.x;\n            this.bgRender.body.y = this.me.body.y;\n        }\n\n    }\n}\nmodule.exports = Intro;\n\n//# sourceURL=webpack:///./src/public/js/intro.js?");
 
 /***/ }),
 
@@ -172,7 +172,18 @@ eval("var BGRender = __webpack_require__(/*! ./renders/background */ \"./src/pub
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-eval("const BW = 208*2;\nclass BGRender {\n  constructor(scene) {\n    scene.add.tileSprite(0, 0, BW, BW, 'bg');\n  }\n\n  update(entity) {\n\n  }\n\n  destroy() {\n\n  }\n}\nmodule.exports = BGRender;\n\n//# sourceURL=webpack:///./src/public/js/renders/background.js?");
+eval("const BW = 208*2;\nclass BGRender {\n  constructor(scene) {\n    // scene.add.tileSprite(0, 0, BW, BW, 'bg');\n    this.body = scene.add.tileSprite(0, 0,  window.innerWidth, window.innerHeight, 'bg');\n    // scene.add.tileSprite(2500, 2500, 5000, 5000, 'bg');\n  }\n\n  update(entity) {\n\n  }\n\n  destroy() {\n\n  }\n}\nmodule.exports = BGRender;\n\n//# sourceURL=webpack:///./src/public/js/renders/background.js?");
+
+/***/ }),
+
+/***/ "./src/public/js/renders/common/probeBase.js":
+/*!***************************************************!*\
+  !*** ./src/public/js/renders/common/probeBase.js ***!
+  \***************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+eval("class ProbeBaseRender {\n  constructor(data, scene) {\n    this.data = data;\n    this.body = scene.add.container(data.x, data.y);\n    let probe = scene.add.sprite(0, 0, 'ufo');\n    probe.name = data.id;\n    probe.depth = 1;\n    probe.setScale(0.5);\n    this.body.add([probe]);\n  }\n\n  update(data) {\n\n  }\n\n  destroy() {\n\n  }\n}\nmodule.exports = ProbeBaseRender;\n\n//# sourceURL=webpack:///./src/public/js/renders/common/probeBase.js?");
 
 /***/ }),
 
@@ -181,9 +192,53 @@ eval("const BW = 208*2;\nclass BGRender {\n  constructor(scene) {\n    scene.add
   !*** ./src/public/js/renders/probe.js ***!
   \****************************************/
 /*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+eval("var ProbeBaseRender = __webpack_require__(/*! ./common/probeBase */ \"./src/public/js/renders/common/probeBase.js\");\nclass ProbeRender extends ProbeBaseRender {\n  constructor(data, scene) {\n    super(data, scene);\n  }\n\n  update(data) {\n    this.body.x = data.x;\n    this.body.y = data.y;\n  }\n\n  destroy() {\n\n  }\n}\nmodule.exports = ProbeRender;\n\n//# sourceURL=webpack:///./src/public/js/renders/probe.js?");
+
+/***/ }),
+
+/***/ "./src/public/js/services/diff.js":
+/*!****************************************!*\
+  !*** ./src/public/js/services/diff.js ***!
+  \****************************************/
+/*! no static exports found */
 /***/ (function(module, exports) {
 
-eval("class ProbeRender {\n  constructor(scene) {\n    this.sprite = scene.add.sprite(100, 100, 'ufo');\n    this.sprite.setScale(0.5);\n  }\n\n  update(data) {\n\n  }\n\n  destroy() {\n\n  }\n}\nmodule.exports = ProbeRender;\n\n//# sourceURL=webpack:///./src/public/js/renders/probe.js?");
+eval("class Diff {\n  constructor(frameInit) {\n    this.frameOld = {};\n    this.frameNew = frameInit;\n  }\n\n  refresh(frameNew) {\n    this.frameOld = this.frameNew;\n    this.frameNew = frameNew;\n  }\n\n  // Find reference diff between frames\n  refDiff() {\n    let res = {\n      toAdd: [],\n      toRemove: [],\n      toUpdate: [],\n    };\n    Object.keys(this.frameNew).forEach((key) => {\n        !this.frameOld[key] && res.toAdd.push(this.frameNew[key]);\n        this.frameOld[key]  && res.toUpdate.push(this.frameNew[key]);\n    });\n    Object.keys(this.frameOld).forEach((key) => {\n        !this.frameNew[key] && res.toRemove.push(this.frameOld[key]);\n    });\n    return res;\n  }\n\n  // Find deep value diff between frames\n  valDiff(toUpdate) {\n    let res = {};\n    toUpdate.forEach((entity) => {\n        res[entity.id] = {};\n        Object.keys(entity).forEach((key) => {\n            if (this.frameNew[entity.id][key] === undefined ||\n                this.frameOld[entity.id][key] === undefined) {\n                res[entity.id][key] = 0;\n            } else {\n                res[entity.id][key] = this.frameNew[entity.id][key] - this.frameOld[entity.id][key];\n            }\n        });\n    });\n    return res;\n  }\n}\nmodule.exports = Diff;\n\n//# sourceURL=webpack:///./src/public/js/services/diff.js?");
+
+/***/ }),
+
+/***/ "./src/public/js/services/frame.js":
+/*!*****************************************!*\
+  !*** ./src/public/js/services/frame.js ***!
+  \*****************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+eval("var Utils = __webpack_require__(/*! ./utils */ \"./src/public/js/services/utils.js\");\nclass FrameManager {\n  constructor(config = {}) {\n      // Server rate\n      this.rate = config.rate || 25;\n\n      // Circular frame queue\n      this.queue = [];\n\n      // Queue size\n      this.capacity = config.capacity || 3;\n\n      // Next slot\n      this.top = 0;\n\n      // Ready\n      this.ready = false;\n\n      this.hist = [];\n      this.enabled = true;\n      this.currentFrame = null;\n  }\n\n  push(data) {\n      // Real frame from server\n      let frame = {\n          time: new Date().getTime(),\n          payload: data\n      };\n      // Filling stage\n      if (this.queue.length < this.capacity) {\n          this.queue.push(frame);\n      // Rotation stage\n      } else {\n          this.top = this.top % this.capacity;\n          this.ready = true;\n          this.queue[this.top] = frame;\n      }\n      this.top++;\n  }\n\n  // x0 ----- x2 latest\n  pop() {\n      let x2 = this.queue[(this.top - 1 + this.capacity) % this.capacity];\n      let x1 = this.queue[(this.top - 2 + this.capacity) % this.capacity];\n      let x0 = this.queue[(this.top - 3 + this.capacity) % this.capacity];\n\n      let res = {};\n      for (let i = 0; i < Object.keys(x2.payload).length; i++) {\n          let key = Object.keys(x2.payload)[i];\n          let ref1 = x2.payload[key];\n          let ref0 = x1.payload[key];\n          let refp = x0.payload[key];\n\n          res[key] = Utils.clone(ref0);\n          if (!this.enabled) continue;\n\n          // No interpolation on non-spacial, or new objects\n          if (!ref1 || !ref1.x || !ref1.y || !ref0 || !ref0.x || !ref0.y) {\n              continue;\n          } else {\n              let gap = x2.time - x1.time || this.rate;\n              let r = (new Date().getTime() - x2.time) / gap;\n              let dx = ref1.x - ref0.x;\n              let dy = ref1.y - ref0.y;\n              let moveX = dx * r;\n              let moveY = dy * r;\n\n            //   if (gap < 10 && (Math.abs(moveX) > 10 || Math.abs(moveY) > 10)) {\n            //       continue;\n            //   }\n\n              res[key].x = ref0.x + moveX;\n              res[key].y = ref0.y + moveY;\n          }\n      }\n      return res;\n  }\n\n  //\n  frameValidate(frame) {\n      // Directional score tolerance\n      let tol = 1.8;\n      let frameNew = {\n          time: new Date().getTime(),\n          payload: {}\n      };\n      let framePrev1 = this.queue[(this.top - 1 + this.capacity) % this.capacity];\n      let framePrev2 = this.queue[(this.top - 2 + this.capacity) % this.capacity];\n      for (let i = 0; i < Object.keys(frame.payload).length; i++) {\n          let id = Object.keys(frame.payload)[i];\n          let f1 = frame.payload[id];\n          let fc = this.currentFrame.payload[id];\n          let fp1 = framePrev1.payload[id];\n          let fp2 = framePrev2.payload[id];\n\n          if (!fc || !f1.direction || !fc.direction || !f1.x || !fc.x || !fp1 || !fp2) {\n              frameNew.payload[id] = f1;\n              continue;\n          }\n          let diff = Utils.normalize({x: f1.x - fc.x, y: f1.y - fc.y}, 1);\n\n          let err = Utils.vsum(diff, f1.direction);\n\n          // The amount which f1 and diff agrees on moving direction (between 0 and 2)\n          let vscore = Utils.magnitude(err);\n          let dscore = Utils.magnitude({x: f1.x - fc.x, y: f1.y - fc.y});\n\n          // fc and f1 agrees on moving direction, f1 is valid\n          if (vscore > tol) {\n              this.hist = [];\n              frameNew.payload[id] = f1;\n          } else if (this.hist.length < 10) {\n              // f1.expired = true;\n              this.hist.push(f1);\n              frameNew.payload[id] = fp1? fp1 : f1;\n              this.queue[(this.top - 1 + this.capacity) % this.capacity].payload[id] = fp2;\n          } else {\n              this.hist = [];\n              frameNew.payload[id] = f1;\n          }\n      }\n      return frameNew;\n  }\n}\nmodule.exports = FrameManager;\n\n\n\n//# sourceURL=webpack:///./src/public/js/services/frame.js?");
+
+/***/ }),
+
+/***/ "./src/public/js/services/rfactory.js":
+/*!********************************************!*\
+  !*** ./src/public/js/services/rfactory.js ***!
+  \********************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+eval("var ProbeRender = __webpack_require__(/*! ../renders/probe */ \"./src/public/js/renders/probe.js\");\nclass RenderUtils {\n  static getRender(type, data, scene) {\n      switch (type) {\n          case \"p\":\n              return new ProbeRender(data, scene);\n          default:\n              return new ProbeRender(data, scene);\n      }\n  }\n}\nmodule.exports = RenderUtils;\n\n//# sourceURL=webpack:///./src/public/js/services/rfactory.js?");
+
+/***/ }),
+
+/***/ "./src/public/js/services/utils.js":
+/*!*****************************************!*\
+  !*** ./src/public/js/services/utils.js ***!
+  \*****************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+eval("class Utils {\n  static clone(obj) {\n    if (obj == null || typeof (obj) != 'object')\n        return obj;\n    var temp = new obj.constructor();\n    for (var key in obj)\n        temp[key] = Utils.clone(obj[key]);\n    return temp;\n  }\n\n  static normalize(point, scale) {\n    let norm = Math.sqrt(point.x * point.x + point.y * point.y);\n    if (norm !== 0) {\n        point.x = scale * point.x / norm;\n        point.y = scale * point.y / norm;\n    }\n    return point;\n  }\n\n  static vsum(v1, v2, norm = false) {\n    let ret = {x: v1.x + v2.x, y: v1.y + v2.y}\n    return norm? Utils.normalize(ret) : ret;\n  }\n\n  static magnitude(v) {\n    return Math.sqrt(v.x * v.x + v.y * v.y);\n  }\n}\nmodule.exports = Utils;\n\n//# sourceURL=webpack:///./src/public/js/services/utils.js?");
 
 /***/ }),
 
@@ -199,13 +254,13 @@ eval("/* WEBPACK VAR INJECTION */(function(Buffer) {/*!\n * Socket.IO v2.3.0\n *
 /***/ }),
 
 /***/ 0:
-/*!************************************************************************************************************************************!*\
-  !*** multi ./src/public/js/app.js ./src/public/js/intro.js ./src/public/js/renders/background.js ./src/public/js/renders/probe.js ***!
-  \************************************************************************************************************************************/
+/*!**************************************************************************************************************************************************************************************************************************************************************************************************************************!*\
+  !*** multi ./src/public/js/app.js ./src/public/js/intro.js ./src/public/js/renders/background.js ./src/public/js/renders/common/probeBase.js ./src/public/js/renders/probe.js ./src/public/js/services/diff.js ./src/public/js/services/frame.js ./src/public/js/services/rfactory.js ./src/public/js/services/utils.js ***!
+  \**************************************************************************************************************************************************************************************************************************************************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
-eval("__webpack_require__(/*! ./src/public/js/app.js */\"./src/public/js/app.js\");\n__webpack_require__(/*! ./src/public/js/intro.js */\"./src/public/js/intro.js\");\n__webpack_require__(/*! ./src/public/js/renders/background.js */\"./src/public/js/renders/background.js\");\nmodule.exports = __webpack_require__(/*! ./src/public/js/renders/probe.js */\"./src/public/js/renders/probe.js\");\n\n\n//# sourceURL=webpack:///multi_./src/public/js/app.js_./src/public/js/intro.js_./src/public/js/renders/background.js_./src/public/js/renders/probe.js?");
+eval("__webpack_require__(/*! ./src/public/js/app.js */\"./src/public/js/app.js\");\n__webpack_require__(/*! ./src/public/js/intro.js */\"./src/public/js/intro.js\");\n__webpack_require__(/*! ./src/public/js/renders/background.js */\"./src/public/js/renders/background.js\");\n__webpack_require__(/*! ./src/public/js/renders/common/probeBase.js */\"./src/public/js/renders/common/probeBase.js\");\n__webpack_require__(/*! ./src/public/js/renders/probe.js */\"./src/public/js/renders/probe.js\");\n__webpack_require__(/*! ./src/public/js/services/diff.js */\"./src/public/js/services/diff.js\");\n__webpack_require__(/*! ./src/public/js/services/frame.js */\"./src/public/js/services/frame.js\");\n__webpack_require__(/*! ./src/public/js/services/rfactory.js */\"./src/public/js/services/rfactory.js\");\nmodule.exports = __webpack_require__(/*! ./src/public/js/services/utils.js */\"./src/public/js/services/utils.js\");\n\n\n//# sourceURL=webpack:///multi_./src/public/js/app.js_./src/public/js/intro.js_./src/public/js/renders/background.js_./src/public/js/renders/common/probeBase.js_./src/public/js/renders/probe.js_./src/public/js/services/diff.js_./src/public/js/services/frame.js_./src/public/js/services/rfactory.js_./src/public/js/services/utils.js?");
 
 /***/ })
 

@@ -1,11 +1,12 @@
-class ProbeRender {
-  constructor(scene) {
-    this.sprite = scene.add.sprite(100, 100, 'ufo');
-    this.sprite.setScale(0.5);
+var ProbeBaseRender = require('./common/probeBase');
+class ProbeRender extends ProbeBaseRender {
+  constructor(data, scene) {
+    super(data, scene);
   }
 
   update(data) {
-
+    this.body.x = data.x;
+    this.body.y = data.y;
   }
 
   destroy() {
