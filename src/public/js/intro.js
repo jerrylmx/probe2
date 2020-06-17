@@ -29,15 +29,14 @@ class Intro extends Phaser.Scene {
             this.diff.refresh(data.entities);
             let refDiff = this.diff.refDiff();
             refDiff.toAdd.forEach((data) => {
-                // window.entities[data.id] = RenderFactory.getRender(data.type, data, this);
+                window.entities[data.id] = RenderFactory.getRender(data.type, data, this);
             });
-            this.testSprite = this.add.sprite(0, 0, 'ufo');
             this.me = window.entities[data.me.id];
             this.cameras.main.setBounds(-2000, -2000, 8000, 8000);
             this.cameras.main.setZoom(0.7);
             this.cameras.main.zoomTo(1, 500);
             // this.cameras.main.startFollow(this.me.body);
-            this.cameras.main.startFollow(this.testSprite);
+            // this.cameras.main.startFollow(this.testSprite);
         });
         window.socket.on("Sync", (data) => {
             if (!this.ready) return;
@@ -71,36 +70,36 @@ class Intro extends Phaser.Scene {
     }
 
     update() {
-        // this.test && console.log(new Date().getTime() - this.test);
-        // this.test = new Date().getTime();
-        // if (!this.ready) return;
-        // if (this.fmanager.ready) {
-        //     let entities = this.fmanager.pop();
-        //     this.diff.refresh(entities);
-        //     let diff = this.diff.refDiff();
-        //     diff.toAdd.forEach((data) => {
-        //         // window.entities[data.id] = RenderFactory.getRender(data.type, data, this);
-        //     });
-            // diff.toRemove.forEach((data) => {
-            //     window.entities[data.id].destroy(this);
-            // });
-            // diff.toUpdate.forEach((data) => {
-            //     window.entities[data.id].update(data, this);
-            // });
-            // this.bgRender.body.tilePositionX = this.me.body.x;
-            // this.bgRender.body.tilePositionY = this.me.body.y;
-            // this.bgRender.body.x = this.me.body.x;
-            // this.bgRender.body.y = this.me.body.y;
-
+        this.test && console.log(new Date().getTime() - this.test);
+        this.test = new Date().getTime();
+        if (!this.ready) return;
+        if (this.fmanager.ready) {
+            let entities = this.fmanager.pop();
+            this.diff.refresh(entities);
+            let diff = this.diff.refDiff();
+            diff.toAdd.forEach((data) => {
+                // window.entities[data.id] = RenderFactory.getRender(data.type, data, this);
+            });
+            diff.toRemove.forEach((data) => {
+                window.entities[data.id].destroy(this);
+            });
+            diff.toUpdate.forEach((data) => {
+                window.entities[data.id].update(data, this);
+            });
+            this.bgRender.body.tilePositionX = this.me.body.x;
+            this.bgRender.body.tilePositionY = this.me.body.y;
+            this.bgRender.body.x = this.me.body.x;
+            this.bgRender.body.y = this.me.body.y;
+        }
 
         if (!this.testSprite) {
             this.testSprite = this.add.sprite(0, 0, 'ufo');
+            this.cameras.main.startFollow(this.testSprite);
         }
         this.bgRender.body.tilePositionX = this.testSprite.x;
         this.bgRender.body.tilePositionY = this.testSprite.y;
         this.bgRender.body.x = this.testSprite.x;
         this.bgRender.body.y = this.testSprite.y;
-        // }
         this.testSprite.x += 1.12324234123452345;
         this.testSprite.y += 1.12341234123412341234;
     }
