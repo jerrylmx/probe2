@@ -41,7 +41,7 @@ class Intro extends Phaser.Scene {
             if (!this.ready) return;
             this.ping = data.time - time;
             time = data.time;
-            console.log(this.ping);
+            // console.log(this.ping);
             this.fmanager.push(data.entities);
         });
         window.socket.emit("Join", {
@@ -69,6 +69,8 @@ class Intro extends Phaser.Scene {
     }
 
     update() {
+        this.test && console.log(new Date().getTime() - this.test);
+        this.test = new Date().getTime();
         if (!this.ready) return;
         if (this.fmanager.ready) {
             let entities = this.fmanager.pop();
