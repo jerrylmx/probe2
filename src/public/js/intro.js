@@ -75,6 +75,9 @@ class Intro extends Phaser.Scene {
         if (!this.ready) return;
         if (this.fmanager.ready) {
             let entities = this.fmanager.pop();
+
+            let {x, y} = entities[Object.keys(entities)[0]]
+            console.log({x, y});
             this.diff.refresh(entities);
             let diff = this.diff.refDiff();
             diff.toAdd.forEach((data) => {
