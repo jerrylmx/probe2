@@ -23,12 +23,15 @@ class FrameManager {
 
   push(data) {
     // Real frame from server
+    this.currentFrame && console.log(new Date().getTime() - this.currentFrame.time);
     this.ready = true;
     let frame = {
         time: new Date().getTime(),
         payload: data
     };
     this.currentFrame = frame;
+    let {x, y} = data[Object.keys(data)[0]]
+    console.log({x, y});
     //   // Filling stage
     //   if (this.queue.length < this.capacity) {
     //       this.queue.push(frame);
