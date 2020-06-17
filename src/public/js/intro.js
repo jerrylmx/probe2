@@ -101,8 +101,8 @@ class Intro extends Phaser.Scene {
         this.bgRender.body.x = this.testSprite.x;
         this.bgRender.body.y = this.testSprite.y;
         // }
-        this.testSprite.x += 1;
-        this.testSprite.y += 1;
+        this.testSprite.x += 1.12324234123452345;
+        this.testSprite.y += 1.12341234123412341234;
     }
 }
 module.exports = Intro;
